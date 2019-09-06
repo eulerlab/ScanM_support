@@ -1,2 +1,4 @@
-# ScanM_support
-Two-photon imaging software - Support
+# ScanM - Support
+Two-photon imaging software
+
+Check out the [wiki](https://github.com/teuler/ScanM_support/wiki).
