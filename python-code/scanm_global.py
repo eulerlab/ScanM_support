@@ -27,10 +27,10 @@ SCMIO_uint32Str               = "UINT32"
 SCMIO_uint64Str               = "UINT64"
 SCMIO_stringStr               = "String"
 SCMIO_real32Str               = "REAL32"
-
+'''
 SCMIO_pixDataWaveRawFormat    = "wDataCh{0:d}_raw"
 SCMIO_pixDataWaveDecodeFormat = "wDataCh{0:d}"
-
+'''
 SCMIO_maxStimBufMapEntries    = 128
 SCMIO_maxStimChans            = 32
 SCMIO_maxInputChans           = 4
@@ -44,16 +44,66 @@ ScM_scanMode_XZYImage         = 4    # xz sections stacked along y (x is fastest
 ScM_scanMode_ZXYImage         = 5    # zx sections stacked along y (z is fastest scanner)
 ScM_scanMode_TrajectArb       = 6
 ScM_scanMode_XZImage          = 7    # ??
+
+ScM_scanModeStr               = [
+  "XYImage", "Line", 
+  "Traject", 
+  "XYZImage", "XZYImage", "ZXYImage", 
+  "TrajectArb", 
+  "XZImage"
+]
 # ...
 ScM_scanType_timelapsed       = 10
 ScM_scanType_zStack           = 11
 # ...
 
+ScM_simpleScanFuncList        = ["XYScan2", "XYScan3", "XYZScan1"]
+
 SCMIO_preHeaderSize_bytes     = 64
 
-Err_Ok                        = 0
-Err_FileNotFound              = -1
-Err_SMH_NoParametersFound     = -2
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
+# Other definitions
+ScM_TTLlow                    = 0
+ScM_TTLhigh                   = 5	
+
+ScM_indexScannerX             = 0        
+ScM_indexScannerY             = 1        
+ScM_indexLaserBlk             = 2        
+ScM_indexLensZ                = 3        
+	
+ScM_PixDataResorted           = 0	
+ScM_PixDataDecoded            = 1
+
+ScM_ScanSeqParamWaveName      = "wScanSeqParams"
+ScM_ScanWarpParamWaveName     = "wScanWarpParams"
+ScM_ScanWarpParamWaveLen      = 13
+
+ScM_warpMode_None             = 0
+ScM_warpMode_Banana           = 1
+ScM_warpMode_Sector           = 2
+ScM_warpMode_gap              = 3
+ScM_warpMode_zBiCorrect       = 4
+ScM_warpMode_last             = 5
+
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
+# Error codes
+ERR_Ok                        = 0
+ERR_NotImplemented            = 1
+ERR_FileNotFound              = 2
+ERR_InvalidSMHObject          = 3
+ERR_SMH_NoParametersFound     = 4
+ERR_CannotReshapePixelData    = 5
+ERR_UnknownScanMode           = 6
+
+ERRStr = [
+  "Ok",
+  "`{0}` not implemented",
+  "File `{0}` not found",
+  "Invalid .smh object",
+  ".smh parameter not found",
+  "Cannot reshape pixel data",
+  "Unknown scan mode"
+]
 # pylint: enable=bad-whitespace
 
 # ----------------------------------------------------------------------------------
@@ -101,6 +151,9 @@ class SCMIO_keys(Enum):
   NumberOfInputChans      = "NumberOfInputChans"
   InChan_PixBufLenList    = "InChan_PixBufLenList"
   
+  NumberOfPixBufsSet      = "NumberOfPixBufsSet"
+  PixBufCounter           = "PixBufCounter"
+
   # --> User keys start here:
   # (SCMIO_UserParameterCount = 43)
   #
@@ -176,7 +229,7 @@ SCMIO_key_USER_trajParams_x      = "TrajParams_{0}"
 
 '''
 // ----------------------------------------------------------------------------------
-strconstant    SCM_usr_AutoScale        = "usr_AutoScale"
+strconstant    ScM_usr_AutoScale        = "usr_AutoScale"
 
 function  ScM_UserAutoScaleFunc (wFrame, scaler, newMin, newMax)
   WAVE    wFrame
@@ -199,7 +252,7 @@ strconstant    SCMIO_mne_ToggleIntegrStim    = " Integrate stimulus in AI3 into 
 '''
 
 # ----------------------------------------------------------------------------------
-def scm_load_pre_header(fPath):
+def scm_load_pre_header(fPath, offset=0):
   """ Load pre-header of file `fPath` (complete path w/ extention)
 
       Structure   SMP_preHeaderStruct    // "uint64"
@@ -213,8 +266,10 @@ def scm_load_pre_header(fPath):
       EndStructure
   """
   d = dict()
+  # Open file in binary mode to get pre-header
   with open(fPath, "r+b") as f:
-    # Open file in binary mode to get pre-header
+    if offset > 0:
+      f.seek(offset)
     buf = f.read(SCMIO_preHeaderSize_bytes)
     hdr = struct.unpack("4H16s5Q", buf)
     d.update({"fileType": bytearray(hdr[0:3]).decode("utf-8")})

@@ -9,28 +9,48 @@
 # ----------------------------------------------------------------------------
 import array
 import struct
+import os.path
 import numpy as np
 from scanm_global import *
 
 # ----------------------------------------------------------------------------
 class SMH(object):
-  """Loads an `.smh` ScanM header file"""
-
+  """ Loads an `.smh` ScanM header file
+  """
   def __init__(self):
-    self._dPreHdrDict = {}
-    self._kvPairDict = {}
-
-  def load(self, fName, verbose=False):
-    """ Load header file `fName`
+    self._reset()
+    
+  def _reset(self):
+    """ Resets object
     """
-    errC = Err_Ok
-    fPath = fName +"." +SCMIO_headerFileExtStr
-    scm_log(f"Opening file `{fPath}`")
+    self._SMHPreHdrDict = {}
+    self._kvPairDict = {}
+    self._fPath = ""
+    self._isSMHReady = False
 
+  def loadSMH(self, fName, verbose=False):
+    """ Load file `fName`
+    """
+    # Clear object if not empty
+    if self._isSMHReady:
+      self._reset()
+      
+    # Some first error checking  
+    errC = ERR_Ok
+    fPath = os.path.splitext(fName)[0]
+    fPathSMH = fPath +"." +SCMIO_headerFileExtStr
+    if not os.path.exists(fPathSMH):
+      errC = ERR_FileNotFound
+      scm_log(ERRStr[errC].format(fPathSMH))
+      return errC
+    else:
+      self._fPath = fPath
+
+    scm_log(f"Processing file `{fPathSMH}`")
     try:
       # Load pre-header into a dict
       scm_log("Loading pre-header ...")
-      self._dPreHdrDict = scm_load_pre_header(fPath)
+      self._SMHPreHdrDict = scm_load_pre_header(fPathSMH)
 
       # Load key-value pairs
       scm_log("Loading parameters (key-value pairs) ...")
@@ -39,7 +59,7 @@ class SMH(object):
       done = False
 
       # Read all lines from header file
-      with open(fPath, "r+t") as f:
+      with open(fPathSMH, "r+t") as f:
         # Jump the pre-header ...
         f.seek(SCMIO_preHeaderSize_bytes)
         while not(done):
@@ -69,8 +89,9 @@ class SMH(object):
               kvl.append(s)
               nkv += 1
       if nkv == 0:
-        scm_log("ERROR: No parameter(s) found")
-        return Err_SMH_NoParametersFound
+        errC = Err_SMH_NoParametersFound
+        scm_log(ERRStr(errC))
+        return errC
 
 
       # Now parse the found key-value pairs
@@ -174,85 +195,236 @@ class SMH(object):
          [np.uint32, len(pixBufLenList), np.array(pixBufLenList)]
         })  
 
+      # Add some keys if they are not yet defined
+      if self.nImgPerFr is None:
+        self._kvPairDict.update(
+          {SCMIO_keys.USER_nImgPerFr.value: [np.uint32, 1, 1]
+          })
+      if self.dxFrDec_pix is None:
+        self._kvPairDict.update(
+          {SCMIO_keys.USER_dxFrDecoded.value: [np.uint32, 1, 0]
+          })
+      if self.dyFrDec_pix is None:
+        self._kvPairDict.update(
+          {SCMIO_keys.USER_dyFrDecoded.value: [np.uint32, 1, 0]
+          })
+      if self.dzFrDec_pix is None:
+        self._kvPairDict.update(
+          {SCMIO_keys.USER_dzFrDecoded.value: [np.uint32, 1, 0]
+          })
+      if self.dzFr_pix is None:
+        self._kvPairDict.update(
+          {SCMIO_keys.USER_dzFr.value: [np.uint32, 1, 1]
+          })
+      if self.dzFr_pix is None:
+        self._kvPairDict.update(
+          {SCMIO_keys.USER_dzFr.value: [np.uint32, 1, 1]
+          })
+      if self.dzFr_pix is None:
+        self._kvPairDict.update(
+          {SCMIO_keys.USER_dzFr.value: [np.uint32, 1, 1]
+          })
+      if self.nPixBufsSet is None:
+        v = self.get(SCMIO_keys.NumberOfFrames)
+        self._kvPairDict.update(
+          {SCMIO_keys.NumberOfPixBufsSet.value: [np.uint32, 1, v]
+          })
+      if self.pixBufCounter is None:
+        v = self.get(SCMIO_keys.FrameCounter)
+        self._kvPairDict.update(
+          {SCMIO_keys.PixBufCounter.value: [np.uint32, 1, v]
+          })
+
+        
+      # Stay compatible with older data files
+      scm_log(f"Correct parameters for older files ...")    
+      if self.scanMode == ScM_scanMode_XYImage:
+        if (self.dxFr_pix /(self.dxRetrace_pix +self.dxOffs_pix)) < 4:
+          self.set(
+            SCMIO_keys.USER_nPixRetrace, 
+            self.get(SCMIO_keys.USER_scanPathFunc)[3+1]
+          )
+          self.set(
+            SCMIO_keys.USER_nXPixLineOffs, 
+            self.get(SCMIO_keys.USER_scanPathFunc)[4+1]
+          )
+        if self.dxFrDec_pix == 0:
+          self.set(SCMIO_keys.USER_dxFrDecoded, self.dxFr_pix)
+        if self.dyFrDec_pix == 0:
+          self.set(SCMIO_keys.USER_dyFrDecoded, self.dyFr_pix)
+        if self.dzFrDec_pix == 0:
+          self.set(SCMIO_keys.USER_dzFrDecoded, self.dzFr_pix)
+      self.set(
+        SCMIO_keys.USER_aspectRatioFrame, 
+        max(1, self.get(SCMIO_keys.USER_aspectRatioFrame))
+      )
+      self.set(
+        SCMIO_keys.USER_stimBufPerFr, 
+        max(1, self.get(SCMIO_keys.USER_stimBufPerFr))
+      )
+      self.set(
+        SCMIO_keys.USER_nImgPerFr, 
+        max(1, self.nImgPerFr)
+      )
+
       scm_log(f"{len(self._kvPairDict)} parameter(s) extracted")
-      self.summary()
+      self._isSMHReady = True
       scm_log("Done.")
 
     except:
       raise
-      #errC = Err_FileNotFound
-
-    return errC == 0
+    return errC
   
   # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
+  ''' General information
+  '''
   @property
   def GUID(self):
-    return self._dPreHdrDict["GUID"]
+    return self._SMHPreHdrDict["GUID"]
+  
+  @property
+  def filePath(self):
+    return self._fPath
+  
+  @property
+  def isSMHReady(self):
+    return self._isSMHReady
 
+  ''' Scan mode and type
+  '''
   @property
   def scanMode(self):
     return self.get(SCMIO_keys.USER_ScanMode)
+  
   @property
   def scanType(self):
     return self.get(SCMIO_keys.USER_ScanType)
 
+  ''' Pixel-related information
+  '''
   @property
   def pixSize_byte(self):
     return self.get(SCMIO_keys.PixelSizeInBytes)
+  
   @property
   def pixDurTarget_us(self):
     return self.get(SCMIO_keys.TargetedPixDur)
+  
   @property
   def pixDur_us(self):
     return self.get(SCMIO_keys.RealPixDur)
 
+  ''' Number of recorded frames
+  '''
   @property
   def nFr(self):
-    return self.get(SCMIO_keys.FrameCounter)
+    try:
+      return self._nFr
+    except AttributeError:
+      return -1
+
+  ''' Zoom factor
+  '''
+  @property
+  def zoom(self): 
+    return self.get(SCMIO_keys.USER_zoom)
   
+  ''' Parameters on frame structure
+  '''
   @property
   def nPixBufPerFr(self):
     return self.get(SCMIO_keys.USER_divFrameBufReq)
   
   @property
+  def nStimBufPerFr(self):
+    return self.get(SCMIO_keys.USER_stimBufPerFr)
+  
+  @property
+  def nImgPerFr(self):
+    return self.get(SCMIO_keys.USER_nImgPerFr)
+  
+  ''' Frame dimensions
+  '''
+  @property
   def dxFr_pix(self):
     return self.get(SCMIO_keys.USER_dxPix)
+  
   @property
   def dyFr_pix(self):
     return self.get(SCMIO_keys.USER_dyPix)
+  
+  @property
+  def dzFr_pix(self):
+    return self.get(SCMIO_keys.USER_dzPix)
 
   @property
   def dxOffs_pix(self):
     return self.get(SCMIO_keys.USER_nXPixLineOffs)
+  
   @property
   def dxRetrace_pix(self):
     return self.get(SCMIO_keys.USER_nPixRetrace)
-
+  
+  @property
+  def dxFrDec_pix(self):
+    return self.get(SCMIO_keys.USER_dxFrDecoded)
+  
+  @property
+  def dyFrDec_pix(self):
+    return self.get(SCMIO_keys.USER_dyFrDecoded)
+  @dyFrDec_pix.setter
+  def dyFrDec_pix(self, v):
+    self.set(SCMIO_keys.USER_dyFrDecoded, v)
+  
+  @property
+  def dzFrDec_pix(self):
+    return self.get(SCMIO_keys.USER_dzFrDecoded)
+  
+  ''' Stimulus-related
+  '''
   @property
   def nStimBuf(self): 
     return self.get(SCMIO_keys.NumberOfStimBufs)
+  
   @property
   def stimChMask(self): 
     return self.get(SCMIO_keys.StimulusChannelMask)
   
+  ''' Input-related
+  '''
   @property
   def nInputCh(self): 
     return self.get(SCMIO_keys.NumberOfInputChans)
+  
   @property
   def inputChMask(self): 
     return self.get(SCMIO_keys.InputChannelMask)
+  
+  @property
+  def nPixBufsSet(self): 
+    return self.get(SCMIO_keys.NumberOfPixBufsSet)
+  @nPixBufsSet.setter
+  def nPixBufsSet(self, v):
+    self.set(SCMIO_keys.NumberOfPixBufsSet, v)
+  
+  @property
+  def pixBufCounter(self): 
+    return self.get(SCMIO_keys.PixBufCounter)
+  @pixBufCounter.setter
+  def pixBufCounter(self, v):
+    self.set(SCMIO_keys.PixBufCounter, v)
 
   @property
-  def zoom(self): 
-    return self.get(SCMIO_keys.USER_zoom)
+  def pixBufLenList(self): 
+    return self.get(SCMIO_keys.InChan_PixBufLenList)
+    
 
   '''
   'StimBufLenList': [numpy.uint32, 3, array([5120, 5120, 5120])],
   'TargetedStimDurList': [numpy.float64, 3, array([128000., 128000., 128000.])],
   'RealStimDurList': [numpy.float64, 3, array([128000., 128000., 128000.])],
   'StimBufMapEntries': [numpy.uint64, (32, 128), array([[0, 0, 0, ..., 0, 0, 0], ... [0, 0, 0, ..., 0, 0, 0]])],
-  'InChan_PixBufLenList': [numpy.uint32, 3, array([2560, 2560, 2560])]}
-  'MinVoltsAO': [numpy.float64, 1, -4.0],
+    'MinVoltsAO': [numpy.float64, 1, -4.0],
   'MaxVoltsAO': [numpy.float64, 1, 4.0],
   'MaxStimulusBufferMapLength': [numpy.uint32, 1, 1],
   'Oversampling_Factor': [numpy.uint32, 1, 25],
@@ -269,7 +441,6 @@ class SMH(object):
   'NFrPerStep': [numpy.uint32, 1, 1],
   'XOffset_V': [numpy.float64, 1, 0.0],
   'YOffset_V': [numpy.float64, 1, 0.0],
-  'dZPixels': [numpy.uint32, 1, 0],
   'ZPixRetraceLen': [numpy.uint32, 1, 0],
   'ZPixLineOffs': [numpy.uint32, 1, 0],
   'UsesZForFastScan': [numpy.uint32, 1, 0],
@@ -279,7 +450,6 @@ class SMH(object):
   'Objective': [numpy.character, 1, 'n/a'],
   'ZLensScaler': [numpy.uint32, 1, 1],
   'ZLensShifty': [None, 1, 1],
-  'AspectRatioFrame': [numpy.float64, 1, 1.0],
   'UnusedValue': [numpy.uint32, 1, 6428160],
   'HeaderLengthInValuePairs': [numpy.uint64, 1, 71],
   'Header_length_in_bytes': [numpy.uint64, 1, 5362],
@@ -289,13 +459,15 @@ class SMH(object):
   def summary(self):
     print(f"Summary")
     print(f"-------")
-    print(f"Scan    : mode, type   : {self.scanMode}, {self.scanType}")
+    s = ScM_scanModeStr[self.scanMode]
+    print(f"Scan    : mode, type   : {s} ({self.scanMode}), {self.scanType}")
     print(f"Pixel   : size         : {self.pixSize_byte} bytes/pixel")
     print(f"          duration     : {self.pixDur_us} us ({self.pixDurTarget_us})")
     print(f"Frame   : x-y size     : {self.dxFr_pix} x {self.dyFr_pix} pixels")      
     print(f"          x-offset     : {self.dxOffs_pix} pixels")
     print(f"          x-retrace    : {self.dxRetrace_pix} pixels")
-    print(f"          count        : {self.nFr} recorded")    
+    s = f"{self.nFr} recorded" if self.nFr >= 0 else "n/a"
+    print(f"          count        : {s}")    
     print(f"          organisation : {self.nPixBufPerFr} pixel buffers/frame")
     print(f"Stimulus: # of buffers : {self.nStimBuf}")
     print(f"          mask         : {self.stimChMask:04b}")
@@ -308,18 +480,33 @@ class SMH(object):
     """ Get value for given key
     """
     key = key if isinstance(key, str) else key.value  
-    val = self._kvPairDict[key]
-    if index < 0:
-      res = val[2]
-    else:
-      if isinstance(val[1], tuple):
-        assert index >= 0 and index < val[1][0], "Index out of range"
-        res = val[2][index]
-      else:  
-        assert index >= 0 and index < val[1], "Index out of range"
-        res = val[2] if val[1] == 1 else val[2][index]
-    if remove:
-      _ = self._kvPairDict.pop(key)
-    return res  
+    try:
+      val = self._kvPairDict[key]
+      if index < 0:
+        res = val[2]
+      else:
+        if isinstance(val[1], tuple):
+          assert index >= 0 and index < val[1][0], "Index out of range"
+          res = val[2][index]
+        else:  
+          assert index >= 0 and index < val[1], "Index out of range"
+          res = val[2] if val[1] == 1 else val[2][index]
+      if remove:
+        _ = self._kvPairDict.pop(key)
+      return res  
+    except KeyError:
+      return None
     
+  def set(self, key, val):
+    """ Set new value for given key
+    """
+    key = key if isinstance(key, str) else key.value  
+    try:
+      data = self._kvPairDict[key]
+      data[2] = val
+      self._kvPairDict[key] = data
+    except KeyError:
+      scm_log("ERROR: Key `{key}` not found ")
+      
+      
 # ----------------------------------------------------------------------------
