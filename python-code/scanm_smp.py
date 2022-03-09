@@ -91,7 +91,10 @@ class SMP(SMH):
       self._SMPPreHdrDict = scm_load_pre_header(
         fPathSMP, self._SMHPreHdrDict["analogDataLen_byte"]
       )
-      if (gp := self._SMPPreHdrDict["GUID"]) != (gh := self._SMHPreHdrDict["GUID"]):
+      gp = self._SMPPreHdrDict["GUID"]
+      gh = self._SMHPreHdrDict["GUID"]
+
+      if gp != gh:
         # GUIDs in header and pixel data files do not match!!!
         scm_log(f"WARNING: GUID mismatch {gh} != {gp}")
 
@@ -246,7 +249,8 @@ class SMP(SMH):
           eof = False
           for iPixBPerCh in range(nPixB):
             # Read next pixel buffer (containing all AI channels)
-            buf = f.read(_size_req := npx *self.pixSize_byte)
+            _size_req = npx * self.pixSize_byte
+            buf = f.read(_size_req)
             _size_read = len(buf)
             eof = _size_read < _size_req
             if eof:

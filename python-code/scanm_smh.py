@@ -59,12 +59,13 @@ class SMH(object):
       done = False
 
       # Read all lines from header file
-      with open(fPathSMH, "r+t") as f:
+      with open(fPathSMH, "r+t", encoding='ISO-8859-1') as f:
         # Jump the pre-header ...
         f.seek(SCMIO_preHeaderSize_bytes)
         while not(done):
           ln = f.readline()
-          if not(done := len(ln) == 0):
+          done = len(ln) == 0
+          if not done:
             # Line with content
             # -> convert to normal string
             # (this is a bit complicated because of special characters, 
