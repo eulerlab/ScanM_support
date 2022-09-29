@@ -222,7 +222,7 @@ class SMP(SMH):
                         self._wDataCh.append([iInCh, np.zeros((dxFrDec, dyFrDec, self._nFr))])
 
             # Read pixel data
-            with open(fPathSMP, "r+b") as f:
+            with open(fPathSMP, "rb") as f:
                 # Load pixel data buffer by buffer in the AI channel waves
                 iPixB = 0
                 iPixBAllCh = 0

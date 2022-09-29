@@ -271,7 +271,7 @@ def scm_load_pre_header(fPath, offset=0):
     """
     d = dict()
     # Open file in binary mode to get pre-header
-    with open(fPath, "r+b") as f:
+    with open(fPath, "rb") as f:
         if offset > 0:
             f.seek(offset)
         buf = f.read(SCMIO_preHeaderSize_bytes)

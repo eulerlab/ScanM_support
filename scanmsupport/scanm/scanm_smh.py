@@ -61,7 +61,7 @@ class SMH(object):
             done = False
 
             # Read all lines from header file
-            with open(fPathSMH, "r+t", encoding='ISO-8859-1') as f:
+            with open(fPathSMH, "rt", encoding='ISO-8859-1') as f:
                 # Jump the pre-header ...
                 f.seek(SCMIO_preHeaderSize_bytes)
                 while not (done):
