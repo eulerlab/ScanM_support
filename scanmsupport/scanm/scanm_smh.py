@@ -3,9 +3,10 @@
 # Class for ScanM header files (`.smh`)
 #
 # The MIT License (MIT)
-# (c) Copyright 2022 Thomas Euler
+# (c) Copyright 2022-23 Thomas Euler, Jonathan Oesterle
 #
 # 2022-01-30, first implementation
+# 2023-06-16, changes to cope with older files
 # ----------------------------------------------------------------------------
 import os.path
 
@@ -57,6 +58,7 @@ class SMH(object):
             # Load key-value pairs
             scm_log("Loading parameters (key-value pairs) ...")
             kvl = []
+            key_w_err = []
             nkv = 0
             done = False
 
@@ -122,14 +124,36 @@ class SMH(object):
                     tid = np.float64
                 elif sty in [SCMIO_uint32Str, SCMIO_uint64Str]:
                     if not v.lower() == "nan":
-                        svl = int(v)
-                        tid = np.uint32 if sty == SCMIO_uint32Str else np.uint64
-
+                        try:
+                            svl = int(v)
+                        except ValueError:
+                            # Mark key as erronous
+                            svl = None
+                            scm_log(f"ERROR reading `{svr}` (value is `{v}`)")
+                            key_w_err.append(svr)
+                        tid = np.uint32 if sty == SCMIO_uint32Str else np.uint64     
+                            
                 # Add parsed parameter to the parameter dictionary
                 self._kvPairDict.update({svr: [tid, nvl, svl]})
                 if verbose:
                     scm_log(f"-> {i:5} {s}")
 
+            # Report and correct errors, if any
+            if len(key_w_err) > 0:
+                scm_log(f"Errors in key(s): {', '.join(key_w_err)}")
+                scm_log(f"Trying to repair ... ")
+                for sKey in key_w_err:
+                    if sKey == SCMIO_keys.USER_nPixRetrace.value:
+                        v = int(self.get(SCMIO_keys.USER_scanPathFunc)[5])
+                        self._kvPairDict.update(
+                            {SCMIO_keys.USER_nPixRetrace.value: [np.uint32, 1, v]
+                             })
+                    elif sKey == SCMIO_keys.USER_nXPixLineOffs.value:
+                        v = int(self.get(SCMIO_keys.USER_scanPathFunc)[4])
+                        self._kvPairDict.update(
+                            {SCMIO_keys.USER_nXPixLineOffs.value: [np.uint32, 1, v]
+                             })
+              
             # Some parameters need to be processed
             stimBufLenList = []
             tarStimDurList = []
@@ -162,7 +186,7 @@ class SMH(object):
                 {SCMIO_keys.RealStimDurList.value:
                      [np.float64, len(tarStimDurList), np.array(realStimDurList)]
                  })
-
+            
             # Retrieve stimulus buffer map
             StimBufMapEntr = np.array([[0] * SCMIO_maxStimBufMapEntries] * SCMIO_maxStimChans)
             mask = self.get(SCMIO_keys.StimulusChannelMask)
@@ -217,15 +241,7 @@ class SMH(object):
             if self.dzFr_pix is None:
                 self._kvPairDict.update(
                     {SCMIO_keys.USER_dzFr.value: [np.uint32, 1, 1]
-                     })
-            if self.dzFr_pix is None:
-                self._kvPairDict.update(
-                    {SCMIO_keys.USER_dzFr.value: [np.uint32, 1, 1]
-                     })
-            if self.dzFr_pix is None:
-                self._kvPairDict.update(
-                    {SCMIO_keys.USER_dzFr.value: [np.uint32, 1, 1]
-                     })
+                    })
             if self.nPixBufsSet is None:
                 v = self.get(SCMIO_keys.NumberOfFrames)
                 self._kvPairDict.update(
@@ -235,7 +251,15 @@ class SMH(object):
                 v = self.get(SCMIO_keys.FrameCounter)
                 self._kvPairDict.update(
                     {SCMIO_keys.PixBufCounter.value: [np.uint32, 1, v]
-                     })
+                     })    
+            if self.nStimBufPerFr is None:
+                self._kvPairDict.update(
+                    {SCMIO_keys.USER_stimBufPerFr.value: [np.uint32, 1, 1]
+                     })  
+            if self.aspectRatioFr is None:
+                self._kvPairDict.update(
+                    {SCMIO_keys.USER_aspectRatioFrame.value: [np.uint32, 1, 1]
+                     })  
 
             # Stay compatible with older data files
             scm_log(f"Correct parameters for older files ...")
@@ -255,6 +279,7 @@ class SMH(object):
                     self.set(SCMIO_keys.USER_dyFrDecoded, self.dyFr_pix)
                 if self.dzFrDec_pix == 0:
                     self.set(SCMIO_keys.USER_dzFrDecoded, self.dzFr_pix)
+            
             self.set(
                 SCMIO_keys.USER_aspectRatioFrame,
                 max(1, self.get(SCMIO_keys.USER_aspectRatioFrame))
@@ -388,6 +413,10 @@ class SMH(object):
     @property
     def dzFrDec_pix(self):
         return self.get(SCMIO_keys.USER_dzFrDecoded)
+      
+    @property
+    def aspectRatioFr(self):
+        return self.get(SCMIO_keys.USER_aspectRatioFrame)
 
     ''' Stimulus-related
     '''
@@ -518,6 +547,6 @@ class SMH(object):
             data[2] = val
             self._kvPairDict[key] = data
         except KeyError:
-            scm_log("ERROR: Key `{key}` not found ")
+            scm_log(f"ERROR: Key `{key}` not found ")
 
 # ----------------------------------------------------------------------------

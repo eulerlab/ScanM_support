@@ -3,9 +3,10 @@
 # Global definitions for Python version of ScanM file reader
 #
 # The MIT License (MIT)
-# (c) Copyright 2022 Thomas Euler
+# (c) Copyright 2022-23 Thomas Euler, Jonathan Oesterle
 #
 # 2022-01-30, first implementation
+# 2023-06-16, changes to cope with older files
 # ----------------------------------------------------------------------------
 import struct
 from enum import Enum
@@ -141,10 +142,10 @@ class SCMIO_keys(Enum):
     RealPixDur = "RealPixelDuration_µs"
     OversampFactor = "Oversampling_Factor"
     '''
-    XCoord_um               = "XCoord_um"
-    YCoord_um               = "YCoord_um"
-    ZCoord_um               = "ZCoord_um"
-    ZStep_um                = "ZStep_um"
+    XCoord_um = "XCoord_um"
+    YCoord_um = "YCoord_um"
+    ZCoord_um = "ZCoord_um"
+    ZStep_um = "ZStep_um"
     '''
     StimBufLenList = "StimBufLenList"
     StimBufMapEntries = "StimBufMapEntries"
@@ -182,22 +183,22 @@ class SCMIO_keys(Enum):
     USER_offsetX_V = "XOffset_V"
     USER_offsetY_V = "YOffset_V"
     '''
-    USER_nZPixRetrace       = "ZPixRetraceLen"
-    USER_usesZForFastScan   = "UsesZForFastScan"
+    USER_nZPixRetrace = "ZPixRetraceLen"
+    USER_usesZForFastScan = "UsesZForFastScan"
     '''
     USER_Comment = "Comment"
     USER_SetupID = "SetupID"
     USER_LaserWavelen_nm = "LaserWavelength_nm"
     USER_Objective = "Objective"
     '''
-    USER_ZLensScaler        = "ZLensScaler"
-    USER_ZLensShifty        = "ZLensShifty"
+    USER_ZLensScaler = "ZLensScaler"
+    USER_ZLensShifty = "ZLensShifty"
     '''
     USER_aspectRatioFrame = "AspectRatioFrame"
     USER_stimBufPerFr = "StimBufPerFr"
     USER_iChFastScan = "iChFastScan"
     '''
-    USER_noYScan            = "noYScan"
+    USER_noYScan = "noYScan"
     '''
     USER_dxFrDecoded = "dxFrDecoded"
     USER_dyFrDecoded = "dyFrDecoded"
@@ -205,7 +206,7 @@ class SCMIO_keys(Enum):
     USER_trajDefVRange_V = "trajDefVRange_V"
     USER_nTrajParams = "nTrajParams"
     '''
-    USER_trajParams_mask    = "TrajParams_*"
+    USER_trajParams_mask = "TrajParams_*"
     '''
     USER_zoomZ = "zoomFactorZ"
     USER_offsetZ_V = "offsetZ_V"
@@ -217,6 +218,9 @@ class SCMIO_keys(Enum):
     USER_nImgPerFr = "nImgPerFr"
     USER_nWarpParams = "nWarpParams"
     USER_WarpParamsStr = "WarpParamsStr"
+ 
+    # For older files:
+    USER_dzFr = "dZPixels"
     # <-- End of user keys
 
 
@@ -286,9 +290,12 @@ def scm_load_pre_header(fPath, offset=0):
     return d
 
 
-def scm_log(msg):
+def scm_log(msg, lf=True):
     """ Logs a message, currently simply by printing it to the history
     """
-    print(msg)
+    if lf:
+        print(msg)
+    else:
+        print(msg, end="")
 
 # ----------------------------------------------------------------------------------

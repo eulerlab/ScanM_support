@@ -3,9 +3,10 @@
 # Class for ScanM stimulation buffer
 #
 # The MIT License (MIT)
-# (c) Copyright 2022 Thomas Euler
+# (c) Copyright 2022-23 Thomas Euler, Jonathan Oesterle
 #
 # 2022-01-31, first implementation
+# 2023-06-16, changes to cope with older files
 # ----------------------------------------------------------------------------
 from .scanm_global import *
 

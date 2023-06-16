@@ -3,9 +3,10 @@
 # Class for ScanM pixel data files (`.smp`)
 #
 # The MIT License (MIT)
-# (c) Copyright 2022 Thomas Euler
+# (c) Copyright 2022-23 Thomas Euler, Jonathan Oesterle
 #
 # 2022-01-31, first implementation
+# 2023-06-16, changes to cope with older files
 # -------------------------------------------------------------------------------------------
 import os.path
 
