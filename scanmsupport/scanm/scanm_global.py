@@ -95,6 +95,7 @@ ERR_InvalidSMHObject = 3
 ERR_SMH_NoParametersFound = 4
 ERR_CannotReshapePixelData = 5
 ERR_UnknownScanMode = 6
+Err_SMH_NoParametersFound = 7
 
 ERRStr = [
     "Ok",
@@ -218,7 +219,7 @@ class SCMIO_keys(Enum):
     USER_nImgPerFr = "nImgPerFr"
     USER_nWarpParams = "nWarpParams"
     USER_WarpParamsStr = "WarpParamsStr"
- 
+
     # For older files:
     USER_dzFr = "dZPixels"
     # <-- End of user keys

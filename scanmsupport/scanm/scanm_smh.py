@@ -131,8 +131,13 @@ class SMH(object):
                             svl = None
                             scm_log(f"ERROR reading `{svr}` (value is `{v}`)")
                             key_w_err.append(svr)
-                        tid = np.uint32 if sty == SCMIO_uint32Str else np.uint64     
-                            
+                        tid = np.uint32 if sty == SCMIO_uint32Str else np.uint64
+                    else:
+                        svl = None
+                        tid = np.float64
+                else:
+                    raise NotImplementedError(f"Type `{sty}` not implemented")
+
                 # Add parsed parameter to the parameter dictionary
                 self._kvPairDict.update({svr: [tid, nvl, svl]})
                 if verbose:
@@ -153,7 +158,7 @@ class SMH(object):
                         self._kvPairDict.update(
                             {SCMIO_keys.USER_nXPixLineOffs.value: [np.uint32, 1, v]
                              })
-              
+
             # Some parameters need to be processed
             stimBufLenList = []
             tarStimDurList = []
@@ -186,7 +191,7 @@ class SMH(object):
                 {SCMIO_keys.RealStimDurList.value:
                      [np.float64, len(tarStimDurList), np.array(realStimDurList)]
                  })
-            
+
             # Retrieve stimulus buffer map
             StimBufMapEntr = np.array([[0] * SCMIO_maxStimBufMapEntries] * SCMIO_maxStimChans)
             mask = self.get(SCMIO_keys.StimulusChannelMask)
@@ -241,7 +246,7 @@ class SMH(object):
             if self.dzFr_pix is None:
                 self._kvPairDict.update(
                     {SCMIO_keys.USER_dzFr.value: [np.uint32, 1, 1]
-                    })
+                     })
             if self.nPixBufsSet is None:
                 v = self.get(SCMIO_keys.NumberOfFrames)
                 self._kvPairDict.update(
@@ -251,17 +256,17 @@ class SMH(object):
                 v = self.get(SCMIO_keys.FrameCounter)
                 self._kvPairDict.update(
                     {SCMIO_keys.PixBufCounter.value: [np.uint32, 1, v]
-                     })    
+                     })
             if self.nStimBufPerFr is None:
                 self._kvPairDict.update(
                     {SCMIO_keys.USER_stimBufPerFr.value: [np.uint32, 1, 1]
-                     })  
+                     })
             if self.aspectRatioFr is None:
                 self._kvPairDict.update(
                     {SCMIO_keys.USER_aspectRatioFrame.value: [np.uint32, 1, 1]
-                     })  
+                     })
 
-            # Stay compatible with older data files
+                # Stay compatible with older data files
             scm_log(f"Correct parameters for older files ...")
             if self.scanMode == ScM_scanMode_XYImage:
                 if (self.dxFr_pix / (self.dxRetrace_pix + self.dxOffs_pix)) < 4:
@@ -279,7 +284,7 @@ class SMH(object):
                     self.set(SCMIO_keys.USER_dyFrDecoded, self.dyFr_pix)
                 if self.dzFrDec_pix == 0:
                     self.set(SCMIO_keys.USER_dzFrDecoded, self.dzFr_pix)
-            
+
             self.set(
                 SCMIO_keys.USER_aspectRatioFrame,
                 max(1, self.get(SCMIO_keys.USER_aspectRatioFrame))
@@ -413,7 +418,7 @@ class SMH(object):
     @property
     def dzFrDec_pix(self):
         return self.get(SCMIO_keys.USER_dzFrDecoded)
-      
+
     @property
     def aspectRatioFr(self):
         return self.get(SCMIO_keys.USER_aspectRatioFrame)
