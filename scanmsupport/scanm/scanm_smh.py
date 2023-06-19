@@ -149,12 +149,12 @@ class SMH(object):
                 scm_log(f"Trying to repair ... ")
                 for sKey in key_w_err:
                     if sKey == SCMIO_keys.USER_nPixRetrace.value:
-                        v = int(self.get(SCMIO_keys.USER_scanPathFunc)[5])
+                        v = int(self.get(SCMIO_keys.USER_scanPathFunc)[4])
                         self._kvPairDict.update(
                             {SCMIO_keys.USER_nPixRetrace.value: [np.uint32, 1, v]
                              })
                     elif sKey == SCMIO_keys.USER_nXPixLineOffs.value:
-                        v = int(self.get(SCMIO_keys.USER_scanPathFunc)[4])
+                        v = int(self.get(SCMIO_keys.USER_scanPathFunc)[5])
                         self._kvPairDict.update(
                             {SCMIO_keys.USER_nXPixLineOffs.value: [np.uint32, 1, v]
                              })
