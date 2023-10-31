@@ -4,6 +4,7 @@ import pytest
 from scanmsupport.scanm.scanm_smp import SMP
 
 __filepath_2013 = "/gpfs01/euler/data/Data/Franke/20130419/1/Raw/Q0_DN.smp"
+__filepath_2013_2 = "/gpfs01/euler/data/Data/Franke/20130828/1/Raw/Q7_DN.smh"
 __filepath_2014 = "/gpfs01/euler/data/Data/Franke/20140110/1/Raw/Q0_Chirps.smp"
 __filepath_2015 = "/gpfs01/euler/data/Data/Franke/20150616/1/Raw/Q0_DN.smp"
 __filepath_2016 = "/gpfs01/euler/data/Data/Franke/20160330/1/Raw/Q2_DarkBars.smp"
@@ -36,6 +37,11 @@ def try_load_file(filepath):
 @pytest.mark.skipif(not os.path.isfile(__filepath_2013), reason="File not found")
 def test_load_2013_file():
     try_load_file(__filepath_2013)
+
+
+@pytest.mark.skipif(not os.path.isfile(__filepath_2013_2), reason="File not found")
+def test_load_2013_2_file():
+    try_load_file(__filepath_2013_2)
 
 
 @pytest.mark.skipif(not os.path.isfile(__filepath_2014), reason="File not found")

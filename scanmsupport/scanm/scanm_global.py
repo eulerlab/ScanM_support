@@ -9,6 +9,7 @@
 # 2023-06-16, changes to cope with older files
 # ----------------------------------------------------------------------------
 import struct
+import warnings
 from enum import Enum
 
 # pylint: disable=bad-whitespace
@@ -281,7 +282,7 @@ def scm_load_pre_header(fPath, offset=0):
             f.seek(offset)
         buf = f.read(SCMIO_preHeaderSize_bytes)
         hdr = struct.unpack("4H16s5Q", buf)
-        d.update({"fileType": bytearray(hdr[0:3]).decode("utf-8")})
+        d.update({"fileType": decode_file_type(hdr[0:3])})
         d.update({"GUID": bytearray(hdr[4]).hex()})
         d.update({"headerLen_byte": hdr[5]})
         d.update({"headerLen_values": hdr[6]})
@@ -289,6 +290,14 @@ def scm_load_pre_header(fPath, offset=0):
         d.update({"pixDataLen_byte": hdr[8]})
         d.update({"analogDataLen_byte": hdr[9]})
     return d
+
+
+def decode_file_type(msg):
+    try:
+        return bytearray(msg).decode("utf-8")
+    except Exception as e:
+        warnings.warn(str(e))
+        return "unknown"
 
 
 def scm_log(msg, lf=True):
