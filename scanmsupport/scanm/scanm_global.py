@@ -59,7 +59,7 @@ ScM_scanType_timelapsed = 10
 ScM_scanType_zStack = 11
 # ...
 
-ScM_simpleScanFuncList = ["XYScan2", "XYScan3", "XYZScan1"]
+ScM_simpleScanFuncList = ["XYScan2", "XYScan3", "XYZScan1", "xzSlice"]
 
 SCMIO_preHeaderSize_bytes = 64
 

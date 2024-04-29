@@ -19,8 +19,8 @@ from .scanm_stim_buf import StimBuf
 
 # -------------------------------------------------------------------------------------------
 class SMP(SMH):
-    """ Loads `.smp` ScanM pixel data file (for a specific `.smh` header file)
-  """
+    """Loads `.smp` ScanM pixel data file (for a specific `.smh` header file)
+    """
 
     def __init__(self):
         super().__init__()
@@ -34,13 +34,13 @@ class SMP(SMH):
         super()._reset()
 
     '''
-  Inherited:
-  def loadSMH(self, fName, verbose=False):  
-  '''
+    Inherited:
+    def loadSMH(self, fName, verbose=False):  
+    '''
 
     def loadSMP(self, verbose=False):
         """ Load pixel data file for the respective `smh` object
-    """
+        """
         # Clear object if not empty
         if self._isSMPReady:
             self._reset()
@@ -55,7 +55,7 @@ class SMP(SMH):
             return ERR_FileNotFound
 
         # Check for currently implemented scanModes
-        if not (self.scanMode in [ScM_scanMode_XYImage]):
+        if not (self.scanMode in [ScM_scanMode_XYImage, ScM_scanMode_XZYImage]):
             s = ScM_scanModeStr[self.scanMode]
             scm_log("ERROR: " + ERRStr[ERR_NotImplemented].format(s))
             return ERR_NotImplemented
@@ -63,14 +63,14 @@ class SMP(SMH):
         # ***************
         # TODO: Add code for other scan modes
         '''
-    ScM_scanMode_Line             = 1
-    ScM_scanMode_Traject          = 2
-    ScM_scanMode_XYZImage         = 3    # xy planes stacked along z
-    ScM_scanMode_XZYImage         = 4    # xz sections stacked along y (x is fastest scanner)
-    ScM_scanMode_ZXYImage         = 5    # zx sections stacked along y (z is fastest scanner)
-    ScM_scanMode_TrajectArb       = 6
-    ScM_scanMode_XZImage          = 7    # ??
-    '''
+        ScM_scanMode_Line             = 1
+        ScM_scanMode_Traject          = 2
+        ScM_scanMode_XYZImage         = 3    # xy planes stacked along z
+        ScM_scanMode_XZYImage         = 4    # xz sections stacked along y (x is fastest scanner)
+        ScM_scanMode_ZXYImage         = 5    # zx sections stacked along y (z is fastest scanner)
+        ScM_scanMode_TrajectArb       = 6
+        ScM_scanMode_XZImage          = 7    # ??
+        '''
         # ***************
         # ***************
 
@@ -110,26 +110,17 @@ class SMP(SMH):
                 dSlow1 = self.dyFr_pix if self.dyFr_pix > 0 else 1
                 dSlow2 = self.dzFr_pix if self.dzFr_pix > 0 else 1
                 if self.scanMode == ScM_scanMode_TrajectArb:
-                    # ***************
-                    # ***************
                     # TODO
-                    # ***************
-                    # ***************
                     pass
 
-            # ***************
-            # ***************
-            # TODO
-            elif self.scamMode == ScM_scanMode_XZYImage:
-                errC = ERR_NotImplemented
-                """
-        dFast = pwNP[%User_dxPix]
-        nFastPixRetr = pwNP[%User_nPixRetrace]
-        nFastPixOff = pwNP[%User_nXPixLineOffs]
-        dSlow1 = pwNP[%User_dzPix]
-        dSlow2 = pwNP[%User_dyPix]
-        """
-            elif self.scamMode == ScM_scanMode_ZXYImage:
+            elif self.scanMode == ScM_scanMode_XZYImage:
+                dFast = self.dxFr_pix
+                nFastPixRetr = self.dxRetrace_pix
+                nFastPixOff = self.dxOffs_pix
+                dSlow1 = self.dzFr_pix if self.dzFr_pix > 0 else 1
+                dSlow2 = self.dyFr_pix if self.dyFr_pix > 0 else 1
+
+            elif self.scanMode == ScM_scanMode_ZXYImage:
                 errC = ERR_NotImplemented
                 """
         dFast = pwNP[%User_dzPix]
@@ -182,7 +173,7 @@ class SMP(SMH):
 
             dxFrDec = self.dxFrDec_pix
             dyFrDec = self.dyFrDec_pix
-            dzFrDec = self.dyFrDec_pix
+            dzFrDec = self.dzFrDec_pix
             nPixDecFr = dxFrDec * dyFrDec  # *dzFrDec
 
             scm_log(f"{nAICh} AI channel(s) ({self.inputChMask:#04b})")
@@ -194,7 +185,7 @@ class SMP(SMH):
                     self._StimBuf.isExtScanFunction and
                     self._StimBuf.pixDecodeMode == ScM_PixDataDecoded
             )
-            if self._hasDecoded:
+            """if self._hasDecoded:
                 # ***************
                 # ***************
                 # TODO
@@ -202,7 +193,7 @@ class SMP(SMH):
                 # ***************
                 scm_log("ERROR: " + ERRStr[ERR_NotImplemented].format("Pixel decoding"))
                 return ERR_NotImplemented
-
+"""
             self._wPixData = []
             self._wDataCh = []
             self._wDecode = np.zeros(nPixDecFr) if self._hasDecoded else None
@@ -221,6 +212,8 @@ class SMP(SMH):
                     self._wPixData.append([iInCh, np.zeros(n, _dtype)])
                     if self._hasDecoded:
                         self._wDataCh.append([iInCh, np.zeros((dxFrDec, dyFrDec, self._nFr))])
+
+
 
             # Read pixel data
             with open(fPathSMP, "rb") as f:
