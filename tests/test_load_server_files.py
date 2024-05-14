@@ -1,7 +1,7 @@
 import os
 import pytest
 
-from scanmsupport.scanm.scanm_smp import SMP
+from utils import try_load_file
 
 __filepath_2013 = "/gpfs01/euler/data/Data/Franke/20130419/1/Raw/Q0_DN.smp"
 __filepath_2013_2 = "/gpfs01/euler/data/Data/Franke/20130828/1/Raw/Q7_DN.smh"
@@ -14,24 +14,6 @@ __filepath_2022 = "/gpfs01/euler/data/Data/Gonschorek/20200416/1/Raw/M1_LR_GCL0_
 
 __filepath_ipl_2018 = "/gpfs01/euler/data/Data/Szatko/20180720/2/Raw/M1_RR_IPL1_DN.smp"
 __filepath_zstack_2018 = "/gpfs01/euler/data/Data/Franke/20180223/1/Raw/M1_P0_Dend_Stack.smp"
-
-
-def load_file(filepath):
-    scmf = SMP()
-    err_load_smh = scmf.loadSMH(filepath, verbose=False)
-    err_load_smp = scmf.loadSMP(filepath)
-    return scmf, err_load_smh, err_load_smp
-
-
-def try_load_file(filepath):
-    try:
-        scmf, err_load_smh, err_load_smp = load_file(filepath)
-        assert isinstance(scmf, SMP), "File not loaded"
-        assert err_load_smh == 0, "SMH not loaded"
-        assert err_load_smp == 0, "SMP not loaded"
-    except Exception as e:
-        assert False, f"Reading the file raised the error\n{e}"
-    return scmf
 
 
 @pytest.mark.skipif(not os.path.isfile(__filepath_2013), reason="File not found")
